@@ -1,4 +1,5 @@
 import os
+import json
 import paho.mqtt.client as mqtt
 
 MQTT_BROKER_HOST = os.getenv("MQTT_BROKER_HOST", "mqtt-broker")
@@ -16,6 +17,14 @@ def on_connect(client, userdata, flags, rc):
         print(f"Failed to connect. Return code: {rc}")
 
 def on_message(client, userdata, message):
+    try:
+        data = json.loads(message.payload.decode())
+        print(f"\nTopic: {message.topic}")
+        print(f"Temperature: {data['temperature']}°{data['unit']}")
+        print(f"Category: {data['category']}")
+        print(f"Timestamp: {data['timestamp']}")
+    except Exception as e:
+        print("Error parsing message:", e)
     topic = message.topic
     payload = message.payload.decode("utf-8")
     print(f"Received from {topic}: {payload}")

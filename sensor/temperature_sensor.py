@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import json
 from datetime import datetime
 
 import paho.mqtt.client as mqtt
@@ -14,17 +15,20 @@ MQTT_BROKER_PORT = int(os.getenv("MQTT_BROKER_PORT", "1883"))
 CLIENT_ID = "PythonTemperatureSensor"
 QOS = 2
 
+
 def get_timestamp():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 def classify_temperature(temperature):
     if temperature <= 45:
-        return TOPIC_TEMP_COLD
+        return "cold", TOPIC_TEMP_COLD
     elif temperature <= 80:
-        return TOPIC_TEMP_NICE
+        return "nice", TOPIC_TEMP_NICE
     else:
-        return TOPIC_TEMP_HOT
-    
+        return "hot", TOPIC_TEMP_HOT
+
+
 def main():
     client = mqtt.Client(client_id=CLIENT_ID)
     print(f"Connecting to MQTT broker at {MQTT_BROKER_HOST}:{MQTT_BROKER_PORT}...")
@@ -35,12 +39,25 @@ def main():
     try:
         while True:
             temperature = random.randint(0, 100)
-            topic = classify_temperature(temperature)
-            message = f"{temperature} degrees - {get_timestamp()}"
+            category, topic = classify_temperature(temperature)
+
+      
+            payload = {
+                "temperature": temperature,
+                "unit": "C",
+                "category": category,
+                "timestamp": get_timestamp(),
+                "message": f"{temperature} degrees - {get_timestamp()}"
+            }
+
+            message = json.dumps(payload)
+
             result = client.publish(topic, message, qos=QOS)
             result.wait_for_publish()
+
             print(f"Published to {topic}: {message}")
             time.sleep(5)
+
     except KeyboardInterrupt:
         print("Stopping temperature sensor...")
     finally:
@@ -48,6 +65,6 @@ def main():
         client.disconnect()
         print("Disconnected from MQTT broker.")
 
+
 if __name__ == "__main__":
     main()
-
